@@ -17,7 +17,8 @@ corpus that states, case by case, what each policy gives up.
 
 The axis is who you trust:
 
-- ``GREEDY`` trusts the URL: nothing but whitespace ends it. Paths
+- ``GREEDY`` trusts the URL: no full-width character ends it (the
+  ASCII tail peel still applies). Paths
   carrying full-width brackets and punctuation survive; prose that
   resumes without a space is swallowed. This is roughly what chat
   platforms and linkify libraries do today, and for their job —

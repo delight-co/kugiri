@@ -16,7 +16,7 @@ A linkifier that reads `）` as part of the URL produces `…/183%EF%BC%89` — 
 
 ## The policy axis: who do you trust?
 
-- **GREEDY** — trust the URL. Only whitespace ends it. This is approximately what chat platforms and linkify libraries do, and for their job — never breaking `/wiki/日本語` — it is right. Its loss: prose that resumes without a space is swallowed (the incident above).
+- **GREEDY** — trust the URL. No full-width character ends it; the ASCII tail peel (trailing punctuation, unbalanced closers) still applies. This is approximately what chat platforms and linkify libraries do, and for their job — never breaking `/wiki/日本語` — it is right. Its loss: prose that resumes without a space is swallowed (the incident above).
 - **BALANCED** — trust prose at the punctuation line. Full-width *punctuation* ends the URL; full-width *letters* do not. Its losses are per-class, below.
 - **STRICT** — trust the prose completely. Any non-ASCII character ends the URL. Correct when your side guarantees percent-encoded (ASCII-only) URLs, which many services do.
 

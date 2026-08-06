@@ -16,7 +16,7 @@ The end of a URL is **not decidable from the text alone**: `…/a（b）` (brack
 
 | Policy | Stance | What it loses |
 |---|---|---|
-| `GREEDY` | Trust the URL: only whitespace ends it | Swallows prose that resumes without a space |
+| `GREEDY` | Trust the URL: no full-width character ends it (ASCII tail punctuation still peels) | Swallows prose that resumes without a space |
 | `BALANCED` | Full-width *punctuation* ends it, full-width *letters* don't | Paths carrying literal full-width brackets; URLs fused by `・` |
 | `STRICT` | Any non-ASCII ends it (your URLs are percent-encoded) | Every non-ASCII path |
 
