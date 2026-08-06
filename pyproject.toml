@@ -1,0 +1,17 @@
+[project]
+name = "kugiri"
+version = "0.1.0"
+description = "URL extent detection for full-width scripts — corpus and reference implementation"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kugiri"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
