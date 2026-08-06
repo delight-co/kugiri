@@ -53,25 +53,52 @@ def test_but_derives_a_custom_policy():
 
 
 # ------------------------------------------------- mechanical sweeps
+#
+# The expected sets are spelled as literals here, independently of the
+# implementation constants: a sweep that iterates the constant itself
+# is a tautology — deleting a character from the set would delete it
+# from the test too. Membership equality plus a behavioral sweep over
+# the literal makes any set change a visible test change.
+
+EXPECTED_WIDE_STOP = ("。、，．！？：；…‥　｡､"
+                      "（）［］｛｝「」『』【】〈〉《》〔〕｢｣“”‘")
+EXPECTED_DEBRIS = "\u200b\u2060\ufeff\u00ad"
+EXPECTED_TRAIL = ".,;:!?*~\"'"
+EXPECTED_CLOSERS = {")": "(", "]": "[", "}": "{"}
+
+
+def test_class_membership_is_pinned_by_literals():
+    assert WIDE_STOP == frozenset(EXPECTED_WIDE_STOP)
+    assert DEBRIS == frozenset(EXPECTED_DEBRIS)
+    assert TRAIL == frozenset(EXPECTED_TRAIL)
+    assert dict(CLOSERS) == EXPECTED_CLOSERS
+
 
 def test_every_wide_stop_and_debris_character_ends_a_url():
-    for c in sorted(WIDE_STOP | DEBRIS):
+    for c in EXPECTED_WIDE_STOP + EXPECTED_DEBRIS:
         cand = f"https://x.example/a{c}rest"
         assert cand[:url_end(cand)] == "https://x.example/a", f"U+{ord(c):04X}"
 
 
 def test_every_trail_character_peels_from_the_end():
-    for c in sorted(TRAIL):
+    for c in EXPECTED_TRAIL:
         cand = f"https://x.example/a{c}"
         assert cand[:url_end(cand)] == "https://x.example/a", f"U+{ord(c):04X}"
 
 
 def test_every_closer_peels_unbalanced_and_stays_balanced():
-    for closer, opener in CLOSERS.items():
+    for closer, opener in EXPECTED_CLOSERS.items():
         unbalanced = f"https://x.example/a{closer}"
         assert unbalanced[:url_end(unbalanced)] == "https://x.example/a", closer
         matched = f"https://x.example/{opener}b{closer}"
         assert url_end(matched) == len(matched), closer
+
+
+def test_scheme_folding_is_ascii_only():
+    # re.IGNORECASE would also fold U+017F into "s" and admit httpſ://
+    from kugiri import extract
+    assert extract("見て HtTpS://x.example/a です") == ["HtTpS://x.example/a"]
+    assert extract("見て httpſ://x.example/a です") == []
 
 
 def test_strict_boundary_is_ascii_not_latin1():
@@ -96,13 +123,27 @@ def test_presets_are_monotone():
         assert g >= b >= s, cand
 
 
-# ------------------------------------------- preset immutability
+# ------------------------------------------- preset independence
 
 def test_derived_policy_shares_no_mutable_state():
     derived = BALANCED.but(ascii_only=True)
     assert derived.closers is not BALANCED.closers
+    derived.closers.pop(")")            # abuse the per-instance copy
+    assert ")" in BALANCED.closers      # the preset is untouched
+
+
+def test_policies_survive_pickle_and_deepcopy():
+    import copy
+    import pickle
+    for p in (GREEDY, BALANCED, STRICT, BALANCED.but(ascii_only=True)):
+        assert pickle.loads(pickle.dumps(p)) == p
+        assert copy.deepcopy(p) == p
+
+
+def test_ascii_only_rejects_non_bools_loudly():
+    # a truthy string would silently behave as STRICT
     with pytest.raises(TypeError):
-        BALANCED.closers[")"] = "x"
+        BALANCED.but(ascii_only="no")
 
 
 def test_string_knobs_normalise_to_character_sets():

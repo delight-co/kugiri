@@ -16,12 +16,12 @@ A linkifier that reads `）` as part of the URL produces `…/4207%EF%BC%89` —
 
 ## What is a candidate
 
-Everything downstream operates on a **candidate**: text from a scheme (`https://` or `http://`, case-insensitive per RFC 3986 §3.1 — the extraction preserves the original casing) up to the first whitespace, `<`, or `>`. Consequences the corpus pins:
+Everything downstream operates on a **candidate**: text from a scheme (`https://` or `http://`, case-insensitive over ASCII letters per RFC 3986 §3.1 — Unicode look-alikes such as `ſ` are not scheme letters; the extraction preserves the original casing) up to the first whitespace, `<`, or `>`. Consequences the corpus pins:
 
 - The ideographic space U+3000 is whitespace, so it ends the candidate before any policy runs (`ideographic-space`).
 - `<` and `>` never belong to a candidate — the old plain-text convention for delimiting URLs (`angle-bracket-adjacent`).
 - A candidate that keeps nothing after its scheme once a policy has spoken yields no span (`bare-scheme`, `bare-scheme-fullwidth`).
-- **Scanning resumes at the decided end**, not at the end of the regex match: when a policy cuts a candidate short, whatever follows the cut is examined again, so `…/x、https://…/y` yields both URLs instead of silently deleting the second (`comma-separated-urls`, `nakaguro-fusion` under STRICT).
+- **Scanning resumes at the decided end**, not at the end of the regex match: when a policy cuts a candidate short, whatever follows the cut is examined again, so `…/x、https://…/y` yields both URLs instead of silently deleting the second (`comma-separated-urls`, `nakaguro-fusion` under STRICT). The flip side is deliberate too: a severed remainder is prose, and URL-shaped text inside it is found even where the *uncut* candidate would have kept it embedded (`severed-tail-recovery`; under GREEDY, which never cuts, the inner URL stays embedded).
 
 ## The policy axis: who do you trust?
 
@@ -74,7 +74,7 @@ The paid costs, pinned: URLs joined by `・` fuse (`nakaguro-fusion`); a URL clo
 
 ### `DEBRIS` — invisible copy-paste artifacts
 
-Zero-width space (U+200B), word joiner (U+2060), BOM (U+FEFF), soft hyphen (U+00AD). An invisible character baked into a URL produces a string that *looks* identical to the real URL and is not — the exact invisible failure the tie-break principle exists to prevent — so the prose-trusting presets stop at them (`zwsp-debris`). GREEDY, true to its stance, keeps them.
+Zero-width space (U+200B), word joiner (U+2060), BOM (U+FEFF), soft hyphen (U+00AD). An invisible character baked into a URL produces a string that *looks* identical to the real URL and is not — the exact invisible failure the tie-break principle exists to prevent — so the prose-trusting presets stop at them (`zwsp-debris`). GREEDY, true to its stance, keeps them. These four are the everyday copy-paste artifacts; the rest of Unicode's format category (bidi controls and friends) is a known gap, out of scope in v0.
 
 ### `TRAIL` — ASCII punctuation peeled from the end
 
@@ -103,4 +103,4 @@ One JSON object per line:
 {"id": "…", "text": "…", "expect": {"greedy": ["…"], "balanced": ["…"], "strict": ["…"]}, "note": "…"}
 ```
 
-Every case lists **all** policies — a case that omits one hides a trade-off — and carries a note saying what it demonstrates. Cases that pin a *loss* are part of the spec on purpose: a later change that trades the other way must show up as a visible decision, not an accident. The reference test suite additionally sweeps every character of `WIDE_STOP`, `DEBRIS`, `TRAIL`, and `CLOSERS` mechanically, so no character is unpinned even where the corpus tells no story about it.
+Every case lists **all** policies — a case that omits one hides a trade-off — and carries a note saying what it demonstrates. Cases that pin a *loss* are part of the spec on purpose: a later change that trades the other way must show up as a visible decision, not an accident. The reference test suite additionally pins the exact membership of `WIDE_STOP`, `DEBRIS`, `TRAIL`, and `CLOSERS` against independent literals and sweeps the behavior of every character in them, so a set cannot change — grow or shrink — without a visible test change, even where the corpus tells no story about it.

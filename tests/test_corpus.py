@@ -43,4 +43,4 @@ def test_ids_are_unique():
 def test_the_corpus_does_not_silently_shrink():
     """Deleting a case must fail loudly — coverage regressions are spec
     changes, not cleanups."""
-    assert len(CASES) >= 41
+    assert len(CASES) >= 42

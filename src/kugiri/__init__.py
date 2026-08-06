@@ -48,7 +48,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field, replace as _replace
-from types import MappingProxyType
 
 __all__ = [
     "Policy", "Decision", "GREEDY", "BALANCED", "STRICT",
@@ -116,11 +115,13 @@ CLOSERS = {")": "(", "]": "[", "}": "{"}
 
 # A URL candidate: scheme up to whitespace. < and > stay out because
 # the angle-bracket convention for delimiting URLs in plain text is old
-# and common, and no unescaped URL carries them. The scheme matches
-# case-insensitively (RFC 3986 §3.1: schemes are case-insensitive, and
-# platforms link HTTPS:// just the same); the extracted text keeps the
-# original casing.
-URL_RE = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
+# and common, and no unescaped URL carries them. The scheme letters are
+# spelled as explicit ASCII classes rather than re.IGNORECASE: RFC 3986
+# §3.1 makes schemes case-insensitive over ASCII ALPHA only, while the
+# flag would also fold Unicode look-alikes (U+017F httpſ://) into a
+# scheme. The extracted text keeps the original casing.
+URL_RE = re.compile(r"[hH][tT][tT][pP][sS]?://[^\s<>]+")
+_SCHEME_RE = re.compile(r"[hH][tT][tT][pP][sS]?://")
 
 
 @dataclass(frozen=True)
@@ -133,12 +134,13 @@ class Policy:
     ends the URL at the first non-ASCII character of any kind — the
     stance that URLs on this side are percent-encoded.
 
-    Instances are immutable in depth: ``wide_stop`` and ``trail`` are
-    normalised to frozensets, ``closers`` to a read-only mapping, so a
-    derived policy never aliases a preset's mutable state. (A policy is
-    still not hashable — it carries a mapping.) Derive variants with
-    :meth:`but`; note that ``Policy()`` with no arguments cuts nothing
-    at all — even laxer than ``GREEDY``.
+    ``wide_stop`` and ``trail`` normalise to frozensets and ``closers``
+    to a per-instance dict copy, so a derived policy never aliases a
+    preset's state and instances pickle and deep-copy cleanly. Treat
+    the presets as read-only constants. (A policy is not hashable — it
+    carries a mapping.) Derive variants with :meth:`but`; note that
+    ``Policy()`` with no arguments cuts nothing at all — even laxer
+    than ``GREEDY``.
     """
 
     wide_stop: frozenset = frozenset()
@@ -147,10 +149,11 @@ class Policy:
     ascii_only: bool = False
 
     def __post_init__(self):
+        if not isinstance(self.ascii_only, bool):
+            raise TypeError("ascii_only must be a bool")
         object.__setattr__(self, "wide_stop", frozenset(self.wide_stop))
         object.__setattr__(self, "trail", frozenset(self.trail))
-        object.__setattr__(self, "closers",
-                           MappingProxyType(dict(self.closers)))
+        object.__setattr__(self, "closers", dict(self.closers))
 
     def but(self, **changes) -> "Policy":
         """A copy of this policy with the given knobs replaced."""
@@ -177,26 +180,26 @@ class Decision:
     peeled: str
 
 
-def explain(candidate: str, policy: Policy = BALANCED) -> Decision:
-    """The extent of the URL at the start of ``candidate``, with its
-    reasons. ``candidate`` is text from the scheme onward, as cut by
-    whitespace (what :data:`URL_RE` matches)."""
-    end = len(candidate)
+def _extent(text: str, start: int, limit: int, policy: Policy) -> tuple:
+    """The decision for the candidate ``text[start:limit]``, computed in
+    place — no substring is materialised, which keeps :func:`find_urls`
+    linear even when one unbroken run holds many URLs."""
+    end = limit
     stop = None
-    for i, c in enumerate(candidate):
+    for i in range(start, limit):
+        c = text[i]
         if c in policy.wide_stop or (policy.ascii_only and ord(c) > 127):
-            end, stop = i, (i, c)
+            end, stop = i, (i - start, c)
             break
     # counted once rather than per peel step: peeling only ever removes
     # trailing characters, and no opener can be one. The window is the
     # head (everything before the front stop), not the whole candidate:
     # brackets beyond the stop belong to prose and must not vote.
-    head = candidate[:end]
-    opens = {c: head.count(o) for c, o in policy.closers.items()}
-    closes = {c: head.count(c) for c in policy.closers}
+    opens = {c: text.count(o, start, end) for c, o in policy.closers.items()}
+    closes = {c: text.count(c, start, end) for c in policy.closers}
     peeled = []
-    while end:
-        c = candidate[end - 1]
+    while end > start:
+        c = text[end - 1]
         if c in policy.trail:
             pass
         elif c in policy.closers and closes[c] > opens[c]:
@@ -205,7 +208,15 @@ def explain(candidate: str, policy: Policy = BALANCED) -> Decision:
             break
         peeled.append(c)
         end -= 1
-    return Decision(end=end, stop=stop, peeled="".join(peeled))
+    return end, stop, "".join(peeled)
+
+
+def explain(candidate: str, policy: Policy = BALANCED) -> Decision:
+    """The extent of the URL at the start of ``candidate``, with its
+    reasons. ``candidate`` is text from the scheme onward, as cut by
+    whitespace (what :data:`URL_RE` matches)."""
+    end, stop, peeled = _extent(candidate, 0, len(candidate), policy)
+    return Decision(end=end, stop=stop, peeled=peeled)
 
 
 def url_end(candidate: str, policy: Policy = BALANCED) -> int:
@@ -226,12 +237,17 @@ def find_urls(text: str, policy: Policy = BALANCED) -> list:
     A match that keeps nothing after its scheme (``https://.``) is not
     a URL and yields no span."""
     spans = []
-    pos = 0
-    while (m := URL_RE.search(text, pos)):
-        end = m.start() + url_end(m.group(), policy)
-        if text[m.start():end].partition("://")[2]:
-            spans.append((m.start(), end))
-        pos = max(end, m.start() + 1)
+    # the outer scan consumes each character once; the inner scan walks
+    # a single whitespace-delimited run, resuming at every cut, so the
+    # whole pass stays linear
+    for m in URL_RE.finditer(text):
+        pos, run_end = m.start(), m.end()
+        while (s := _SCHEME_RE.search(text, pos, run_end)):
+            start = s.start()
+            end, _, _ = _extent(text, start, run_end, policy)
+            if text[start:end].partition("://")[2]:
+                spans.append((start, end))
+            pos = max(end, start + 1)
     return spans
 
 
