@@ -8,8 +8,7 @@ Everything here is visible to the world. Act accordingly.
 
 ## Language
 
-All external communication in English: commits, issues, PRs, comments, code comments, docs.
-An example or test fixture that only carries meaning in a particular language is written in that language — this repo is *about* full-width scripts, so the corpus is full of them by design.
+All external communication in English: commits, issues, PRs, comments, code comments, docs. An example or test fixture that only carries meaning in a particular language is written in that language — this repo is *about* full-width scripts, so the corpus is full of them by design.
 
 ## Information Hygiene
 

@@ -4,7 +4,7 @@
 
 Where does a URL end when it is embedded in Japanese or Chinese prose? Auto-linkers answer with rules tuned on space-separated text, and the result is the everyday broken link:
 
-> （詳細はこちら: https://example.com/pr/183）
+> （詳細はこちら: https://example.com/pr/4207）
 
 — linkified with the closing `）` swallowed in, a URL that leads nowhere.
 
@@ -16,11 +16,11 @@ The end of a URL is **not decidable from the text alone**: `…/a（b）` (brack
 
 | Policy | Stance | What it loses |
 |---|---|---|
-| `GREEDY` | Trust the URL: no full-width character ends it (ASCII tail punctuation still peels) | Swallows prose that resumes without a space |
-| `BALANCED` | Full-width *punctuation* ends it, full-width *letters* don't | Paths carrying literal full-width brackets; URLs fused by `・` |
+| `GREEDY` | Trust the URL: no full-width punctuation ends it (whitespace still ends the candidate; ASCII tail punctuation still peels) | Swallows prose that resumes without a space |
+| `BALANCED` | A curated set of full-width *punctuation* ends it, full-width *letters* don't | Paths carrying literal full-width brackets or sentence punctuation (`…/君の名は。`); prose resuming with a *letter* (`…URLを見て`); URLs fused by `・` |
 | `STRICT` | Any non-ASCII ends it (your URLs are percent-encoded) | Every non-ASCII path |
 
-Tie-breaks follow one principle: **prefer the visible failure.** A URL cut at `【` fails loudly; a URL cut inside `ドナルド・トランプ` resolves to a *different page* and hides the break. That is why `・` (U+30FB) and `’` (U+2019) never end a URL here. The full reasoning per character class is in [SPEC.md](SPEC.md).
+Tie-breaks follow one principle: **prefer the visible failure.** A URL cut at `【` fails loudly; a URL cut inside `ドナルド・トランプ` resolves to a *different page* and hides the break. That is why `・` (U+30FB) and `’` (U+2019) never end a URL under GREEDY or BALANCED (STRICT, by definition, cuts at any non-ASCII). Every loss above is pinned as a corpus case, not just prose. The full reasoning per character class — and the honest list of what the curated set does *not* cover — is in [SPEC.md](SPEC.md).
 
 ## Quick start
 
@@ -33,11 +33,11 @@ pip install git+https://github.com/delight-co/kugiri
 ```python
 from kugiri import extract, explain, STRICT, BALANCED
 
-extract("（会話はこちら: https://example.com/?session=s1）")
-# ['https://example.com/?session=s1']
+extract("（会話はこちら: https://example.com/thread/42）")
+# ['https://example.com/thread/42']
 
-extract("https://a.example/x・https://b.example/y", STRICT)
-# ['https://a.example/x']
+extract("資料 https://a.example/x、https://b.example/y")
+# ['https://a.example/x', 'https://b.example/y']
 
 explain("https://x.example/doc（PDF）です")
 # Decision(end=21, stop=(21, '（'), peeled='')
