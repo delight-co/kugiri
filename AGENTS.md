@@ -19,10 +19,10 @@ Never write: private repository names or issue numbers, Slack IDs, session URLs,
 AI-authored commits, PRs, issues, and comments end with:
 
 ```
-✍️ Author: Claude Code with @{GitHub username of the human} (AI-written, human-approved)
+✍️ Author: Claude Code with @{GitHub username of the human} (AI-written, human-approved, session {session identifier})
 ```
 
-This line discloses AI authorship and marks human approval — it is an instruction for agents working in this repo, not a requirement on human contributors.
+This line discloses AI authorship and marks human approval — it is an instruction for agents working in this repo, not a requirement on human contributors. The session identifier is the working session's opaque short id (for example the first 8 hex characters); it lets a change be traced back to the session that produced it. It is an identifier, not a link — session URLs stay out of this repository (see Information Hygiene). An agent whose harness has no such identifier omits the clause rather than inventing one.
 
 ## The corpus is the spec
 
