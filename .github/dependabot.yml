@@ -1,0 +1,30 @@
+# Dependabot version updates. The GitHub Actions in .github/workflows are
+# pinned to commit SHAs, and Dependabot is the only path that moves those pins
+# (it bumps the SHA and the trailing version comment together). Added
+# 2026-09-21; nothing bumped them before that.
+#
+# No Python entry: pyproject.toml declares no dependencies (standard library
+# only), so there is nothing for Dependabot to update there. Add an entry if
+# that changes.
+#
+# cooldown: a new release is proposed only after 7 days (it delays the PR,
+# not the install). groups: minor + patch land in one PR; majors come alone.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "00:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 999
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
