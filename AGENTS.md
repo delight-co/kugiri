@@ -22,7 +22,7 @@ AI-authored commits, PRs, issues, and comments end with:
 ✍️ Author: {AI agent name} with @{GitHub username of the human} (session {session identifier})
 ```
 
-The line itself discloses AI authorship: only AI-authored changes carry it, the agent name (for example, Claude Code) says which AI wrote the change, and the handle names the human the agent works with. It does not claim that the human reviewed the text — human review, where it happens, shows up in the pull request's reviews. This is an instruction for agents working in this repo, not a requirement on human contributors. The session identifier is the working session's opaque short id (for example the first 8 hex characters); it lets a change be traced back to the session that produced it. It is an identifier, not a link — session URLs stay out of this repository (see Information Hygiene). An agent whose harness has no such identifier omits the clause rather than inventing one.
+The line itself discloses AI authorship: only AI-authored changes carry it, the agent name (for example, Claude Code) says which AI agent wrote the change, and the handle names the human the agent works with. It does not claim that the human reviewed the text — human review, where it happens, shows up in the pull request's reviews. This is an instruction for agents working in this repo, not a requirement on human contributors. The session identifier is the working session's opaque short id (for example the first 8 hex characters); it lets a change be traced back to the session that produced it. It is an identifier, not a link — session URLs stay out of this repository (see Information Hygiene). An agent whose harness has no such identifier omits the clause rather than inventing one.
 
 ## The corpus is the spec
 
