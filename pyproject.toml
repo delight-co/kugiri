@@ -13,5 +13,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/kugiri"]
 
+[tool.uv]
+# Install-time cooldown: when uv resolves this project, a distribution published
+# less than one day ago is treated as if it did not exist yet. If only such
+# too-new releases satisfy a requirement, resolution fails instead of silently
+# taking them. Written as a duration, uv applies it relative to the time of each
+# resolve.
+exclude-newer = "1 day"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
